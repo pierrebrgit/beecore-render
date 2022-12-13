@@ -1,4 +1,3 @@
-const port = process.env.PORT || 3001;
 
 const parser = require('node-html-parser');
 const axios = require('axios');
@@ -29,9 +28,6 @@ try {
 }
 
 const app = express();
-
-app.listen(port, () => console.log(`Example app listening on port ${port}!`));
-
 
 const dateTransformer = (str) => {
   // const str = '22/04/2022 07:30:16';
@@ -562,5 +558,5 @@ app.get('/api/profile/', (req, res_api) => {
 })
 
 //PORT ENVIRONMENT VARIABLE
-const port = process.env.PORT || 8080;
+const port = process.env.PORT || 3001;
 app.listen(port, () => console.log(`Listening on port ${port}..`));
