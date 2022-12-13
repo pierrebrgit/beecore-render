@@ -24,7 +24,7 @@ let https;
 try {
   https = require('node:https');
 } catch (err) {
-  console.log('https support is disabled!');
+  console.log('https support is disabled');
 }
 
 const app = express();
