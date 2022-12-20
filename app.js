@@ -4,7 +4,7 @@ const axios = require('axios');
 const FormData = require('form-data');
 const express = require('express');
 const cors = require('cors');
-const { myRoster, emptyRoster, lanaRoster } = require('./fake-data');
+const { myRoster, emptyRoster, lanaRoster } = require(__dirname + '/fake-data');
 const fs = require('fs');
 const cheerio = require('cheerio');
 
