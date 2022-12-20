@@ -7,6 +7,7 @@ const cors = require('cors');
 const { myRoster, emptyRoster, lanaRoster } = require(__dirname + '/fake-data');
 const fs = require('fs');
 const cheerio = require('cheerio');
+const ical = require('node-ical');
 
 // const { faker } = require('@faker-js/faker');
 
@@ -316,6 +317,137 @@ const process_dump = (dump, full_name) => {
   return roster;
 }
 
+const process_ical = (ical, base) => {
+
+  // extract the flights or MEP from the ical
+  let flights_meps = []
+  for (const event of Object.values(ical)) {
+      if (event.summary && event.summary.startsWith("7")) {
+
+        const [startBase, endBase] = event.location.substring(0, 9).split("-").map(icao_iata)
+        const signin_date = event.start
+        const end_date = event.end
+
+        console.log("Flight found: " + startBase + " (" + signin_date.toUTCString() + ")" + " to " + endBase + " (" + end_date.toUTCString() + ")")
+
+        const flight = {
+          departure: startBase,
+          startDate: signin_date,
+          flightNumber: event.summary,
+          endDate: end_date,
+          destination: endBase,
+        }
+
+        flights_meps.push(flight)
+
+      } else if (event.summary && event.summary.startsWith("MEP")) {
+        const [startBase, endBase] = event.location.substring(0, 9).split("-").map(icao_iata)
+        const signin_date = event.start
+        const end_date = event.end
+
+
+        if ((startBase !== "TLS") && (endBase !== "TLS")) {
+
+          console.log("MEP found: " + startBase + " (" + signin_date.toUTCString() + ")" + " to " + endBase + " (" + end_date.toUTCString() + ")")
+
+          const mep = {
+            departure: startBase,
+            startDate: signin_date,
+            flightNumber: 'MEP',
+            endDate: end_date,
+            destination: endBase,
+          }
+
+          flights_meps.push(mep)
+        }
+      }
+  }
+
+  // building the roster with rotations (simple or b2b)
+  let roster = {
+    base: base,
+    rotations: []
+  }
+
+  // finds a flight or MEP departing the base and closes the rotation when back in the base
+  for (let i = 0; i < flights_meps.length; i++) {
+    // if departing ORY, open the rotation and look for the end
+    if (flights_meps[i].departure === base) {
+      console.log("1 flight departing " + base + " found")
+      const flight1 = flights_meps[i];
+
+      // look for the next flight or MEP (if it exists)
+      // if return from same destination back to ORY, rotation complete
+      // console.log(i+1)
+      if (i+1 < flights_meps.length) {
+        //console.log(flights_meps.length)
+        //console.log(flight1.destination)
+        //console.log(flights_meps[i+1].departure)
+        //console.log(flights_meps[i+1].destination)
+
+        if ((flight1.destination === flights_meps[i+1].departure)
+            && (flights_meps[i+1].destination === base)) {
+          const flight2 = flights_meps[i+1];
+
+          // short rotation found, building the rotation
+          const rotation = {
+            flight1Start: flight1.startDate,
+            flight1Number: flight1.flightNumber,
+            flight1End: flight1.endDate,
+            destination: flight1.destination,
+            flight2Start: flight2.startDate,
+            flight2Number: flight2.flightNumber,
+            flight2End: flight2.endDate
+          }
+
+          // adding it to the roster
+          roster.rotations.push(rotation)
+
+          // skipping the next flight
+          i++;
+        } else if ((flight1.destination === flights_meps[i+1].departure)
+            && (flights_meps[i+1].destination != base)) {
+            // long rotation found
+            if (i+3 < flights_meps.length && flights_meps[i+3].destination === base) {
+              //full rotation available and back to ORY, proceeding
+              const flight2 = flights_meps[i+1];
+              const flight3 = flights_meps[i+2];
+              const flight4 = flights_meps[i+3];
+
+              const rotation = {
+                flight1Start: flight1.startDate,
+                flight1Number: flight1.flightNumber,
+                flight1End: flight1.endDate,
+                destination1: flight1.destination,
+                flight2Start: flight2.startDate,
+                flight2Number: flight2.flightNumber,
+                flight2End: flight2.endDate,
+                destination2: flight2.destination,
+                flight3Start: flight3.startDate,
+                flight3Number: flight3.flightNumber,
+                flight3End: flight3.endDate,
+                destination3: flight3.destination,
+                flight4Start: flight4.startDate,
+                flight4Number: flight4.flightNumber,
+                flight4End: flight4.endDate,
+              }
+
+              // adding it to the roster
+              roster.rotations.push(rotation);
+
+              // skipping the next 3 flights
+              i = i + 3;
+            }
+        }
+      } else {
+        console.log("Last flight, cannot close the rotation")
+      }
+    }
+  }
+
+  return roster;
+}
+
 
 app.use(express.json());
 app.use(cors());
@@ -325,13 +457,13 @@ axios.defaults.withCredentials = true;
 
 axios.interceptors.request.use(x => {
   console.log("====== AXIOS REQUEST ======");
-  // console.log(x);
+  console.log(x);
   return x;
 })
 
 axios.interceptors.response.use(x => {
-    console.log("====== AXIOS RESPONSE ======");
-  // console.log(x);
+  console.log("====== AXIOS RESPONSE ======");
+  console.log(x);
   return x;
 })
 
@@ -348,7 +480,38 @@ app.get('/api/fake/lana', (req, res_api) => {
   res_api.send(lanaRoster);
 });
 
-app.get('/api/profile/', (req, res_api) => {
+app.get('/api/test/cal', async (req, res_api) => {
+  let wlink = "webcal://cyberjet.frenchbee.com/CrewAccessICS/CrewICS?ics=8F3C62AE-89DD-4BD4-93E5-57E56AEE3776"
+  let nlink = encodeURI(wlink.replace("webcal", "https"))
+
+  const webEvents = await ical.async.fromURL(nlink);
+
+  // const ics_file = fs.readFileSync('/tmp.ics');
+
+
+  for (const event of Object.values(webEvents)) {
+      console.log(
+          'Summary: ' + event.summary
+      );
+  };
+
+  res_api.send('Done');
+});
+
+app.get('/api/profile/', async (req, res_api) => {
+  let wlink = req.query.ics
+  let base = req.query.base
+  let nlink = encodeURI(wlink.replace("webcal", "https"))
+  //console.log(nlink)
+
+  const webEvents = await ical.async.fromURL(nlink);
+
+  const roster = process_ical(webEvents, base)
+
+  res_api.send(roster);
+});
+
+app.get('/api/old_profile/', (req, res_api) => {
   const login = req.query.login;
   const password = req.query.password;
 
