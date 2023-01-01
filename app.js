@@ -240,7 +240,7 @@ const process_ical = (ical, base) => {
           const flight2 = flights_meps[i+1];
 
           // short rotation found, building the rotation
-          const rotation = [flight1, flight2]
+          const rotation = {flights: [flight1, flight2]}
 
           // adding it to the roster
           roster.rotations.push(rotation)
@@ -256,7 +256,7 @@ const process_ical = (ical, base) => {
               const flight3 = flights_meps[i+2];
               const flight4 = flights_meps[i+3];
 
-              const rotation = [flight1, flight2, flight3, flight4]
+              const rotation = {flights: [flight1, flight2, flight3, flight4]}
 
               // adding it to the roster
               roster.rotations.push(rotation);
