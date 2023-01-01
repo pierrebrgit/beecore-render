@@ -167,156 +167,6 @@ const profile_generator = (month) => {
   return fake_profile;
 }
 
-const process_dump = (dump, full_name) => {
-  // fs.writeFile('dump.html', dump, function (err) {
-  //   if (err) return console.log(err);
-  //   console.log("Writing file");
-  // });
-
-  // parsing the XML
-  const cheerio_planning = cheerio.load(dump);
-  const duties = cheerio_planning('CORPS');
-  console.log("Duties found: " + duties.length)
-
-  // extract the flights
-  let flights = []
-  duties.each(function (i, elem) {
-    const dutyType = cheerio_planning("div[id^=zrl_]", elem).first().text();
-
-    console.log("Duty type: " + dutyType)
-
-    if (dutyType.startsWith("FBU")) {
-      const startBase = icao_iata(cheerio_planning("div.pos54", elem).first().text());
-      const endBase = icao_iata(cheerio_planning("div.pos66", elem).first().text());
-
-      if (startBase === endBase) {
-        console.log("Same flight origin and destination: discarding")
-      } else {
-        const checkin = cheerio_planning("div.pos41", elem).first().text();
-
-        const flightNum = dutyType.slice(3, 6);
-        const checkout = cheerio_planning("div.pos78", elem).first().text();
-
-        console.log("Flight found: " + startBase + "(" + checkin + ")" + " to " + endBase + "(" + checkout + ")")
-
-        const flight = {
-          departure: startBase,
-          startDate: dateTransformer(checkin),
-          flightNumber: flightNum,
-          endDate: dateTransformer(checkout),
-          destination: endBase,
-        }
-
-        flights.push(flight)
-      }
-    } else if (dutyType.startsWith("MEP")) {
-      const checkin = cheerio_planning("div.pos41", elem).first().text();
-      const startBase = icao_iata(cheerio_planning("div.pos54", elem).first().text());
-      const checkout = cheerio_planning("div.pos78", elem).first().text();
-      const endBase = icao_iata(cheerio_planning("div.pos66", elem).first().text());
-
-      console.log("MEP found: " + startBase + "(" + checkin + ")" + " to " + endBase + "(" + checkout + ")")
-
-      if ((startBase !== "TLS") && (endBase !== "TLS")) {
-        const flight = {
-          departure: startBase,
-          startDate: dateTransformer(checkin),
-          flightNumber: 'MEP',
-          endDate: dateTransformer(checkout),
-          destination: endBase,
-        }
-
-        flights.push(flight)
-      }
-    }
-  });
-
-  // building the roster with rotations (simple or b2b)
-  let roster = {
-    fullName: full_name,
-    rotations: []
-  }
-
-  // only dealing with ORY base
-  // finds a flight or MEP departing ORY and closes the rotation when back in ORY
-  for (let i = 0; i < flights.length; i++) {
-    // if departing ORY, open the rotation and look for the end
-    if (flights[i].departure === 'ORY') {
-      console.log("1 flight departing ORY found")
-      const flight1 = flights[i];
-
-      // look for the next flight or MEP (if it exists)
-      // if return from same destination back to ORY, rotation complete
-      // console.log(i+1)
-      if (i+1 < flights.length) {
-        console.log(flights.length)
-        console.log(flight1.destination)
-        console.log(flights[i+1].departure)
-        console.log(flights[i+1].destination)
-
-        if ((flight1.destination === flights[i+1].departure)
-            && (flights[i+1].destination === 'ORY')) {
-          const flight2 = flights[i+1];
-
-          // short rotation found, building the rotation
-          const rotation = {
-            flight1Start: flight1.startDate,
-            flight1Number: flight1.flightNumber,
-            flight1End: flight1.endDate,
-            destination: flight1.destination,
-            flight2Start: flight2.startDate,
-            flight2Number: flight2.flightNumber,
-            flight2End: flight2.endDate
-          }
-
-          // adding it to the roster
-          roster.rotations.push(rotation);
-
-          // skipping the next flight
-          i++;
-        } else if ((flight1.destination === flights[i+1].departure)
-            && (flights[i+1].destination != 'ORY')) {
-            // long rotation found
-            if (i+3 < flights.length && flights[i+3].destination === 'ORY') {
-              //full rotation available and back to ORY, proceeding
-              const flight2 = flights[i+1];
-              const flight3 = flights[i+2];
-              const flight4 = flights[i+3];
-
-              const rotation = {
-                flight1Start: flight1.startDate,
-                flight1Number: flight1.flightNumber,
-                flight1End: flight1.endDate,
-                destination1: flight1.destination,
-                flight2Start: flight2.startDate,
-                flight2Number: flight2.flightNumber,
-                flight2End: flight2.endDate,
-                destination2: flight2.destination,
-                flight3Start: flight3.startDate,
-                flight3Number: flight3.flightNumber,
-                flight3End: flight3.endDate,
-                destination3: flight3.destination,
-                flight4Start: flight4.startDate,
-                flight4Number: flight4.flightNumber,
-                flight4End: flight4.endDate,
-              }
-
-              // adding it to the roster
-              roster.rotations.push(rotation);
-
-              // skipping the next 3 flights
-              i = i + 3;
-            }
-        }
-      } else {
-        console.log("Last flight, cannot close the rotation")
-      }
-    }
-  }
-
-  return roster;
-}
-
 const process_ical = (ical, base) => {
 
   // extract the flights or MEP from the ical
@@ -331,7 +181,7 @@ const process_ical = (ical, base) => {
         console.log("Flight found: " + startBase + " (" + signin_date.toUTCString() + ")" + " to " + endBase + " (" + end_date.toUTCString() + ")")
 
         const flight = {
-          departure: startBase,
+          origin: startBase,
           startDate: signin_date,
           flightNumber: event.summary,
           endDate: end_date,
@@ -351,7 +201,7 @@ const process_ical = (ical, base) => {
           console.log("MEP found: " + startBase + " (" + signin_date.toUTCString() + ")" + " to " + endBase + " (" + end_date.toUTCString() + ")")
 
           const mep = {
-            departure: startBase,
+            origin: startBase,
             startDate: signin_date,
             flightNumber: 'MEP',
             endDate: end_date,
@@ -372,7 +222,7 @@ const process_ical = (ical, base) => {
   // finds a flight or MEP departing the base and closes the rotation when back in the base
   for (let i = 0; i < flights_meps.length; i++) {
     // if departing ORY, open the rotation and look for the end
-    if (flights_meps[i].departure === base) {
+    if (flights_meps[i].origin === base) {
       console.log("1 flight departing " + base + " found")
       const flight1 = flights_meps[i];
 
@@ -382,30 +232,22 @@ const process_ical = (ical, base) => {
       if (i+1 < flights_meps.length) {
         //console.log(flights_meps.length)
         //console.log(flight1.destination)
-        //console.log(flights_meps[i+1].departure)
+        //console.log(flights_meps[i+1].origin)
         //console.log(flights_meps[i+1].destination)
 
-        if ((flight1.destination === flights_meps[i+1].departure)
+        if ((flight1.destination === flights_meps[i+1].origin)
             && (flights_meps[i+1].destination === base)) {
           const flight2 = flights_meps[i+1];
 
           // short rotation found, building the rotation
-          const rotation = {
-            flight1Start: flight1.startDate,
-            flight1Number: flight1.flightNumber,
-            flight1End: flight1.endDate,
-            destination: flight1.destination,
-            flight2Start: flight2.startDate,
-            flight2Number: flight2.flightNumber,
-            flight2End: flight2.endDate
-          }
+          const rotation = [flight1, flight2]
 
           // adding it to the roster
           roster.rotations.push(rotation)
 
           // skipping the next flight
           i++;
-        } else if ((flight1.destination === flights_meps[i+1].departure)
+        } else if ((flight1.destination === flights_meps[i+1].origin)
             && (flights_meps[i+1].destination != base)) {
             // long rotation found
             if (i+3 < flights_meps.length && flights_meps[i+3].destination === base) {
@@ -414,23 +256,7 @@ const process_ical = (ical, base) => {
               const flight3 = flights_meps[i+2];
               const flight4 = flights_meps[i+3];
 
-              const rotation = {
-                flight1Start: flight1.startDate,
-                flight1Number: flight1.flightNumber,
-                flight1End: flight1.endDate,
-                destination1: flight1.destination,
-                flight2Start: flight2.startDate,
-                flight2Number: flight2.flightNumber,
-                flight2End: flight2.endDate,
-                destination2: flight2.destination,
-                flight3Start: flight3.startDate,
-                flight3Number: flight3.flightNumber,
-                flight3End: flight3.endDate,
-                destination3: flight3.destination,
-                flight4Start: flight4.startDate,
-                flight4Number: flight4.flightNumber,
-                flight4End: flight4.endDate,
-              }
+              const rotation = [flight1, flight2, flight3, flight4]
 
               // adding it to the roster
               roster.rotations.push(rotation);
