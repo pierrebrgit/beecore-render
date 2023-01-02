@@ -56,6 +56,18 @@ const icao_iata = (str) => {
   return str
 }
 
+function getRandomBase() {
+  var d = Math.random();
+  if (d < 0.8) {
+    // 80% chance of being here
+    // ORY base
+    return "ORY"
+  } else {
+    // 20%, RUN base
+    return "RUN"
+  }
+}
+
 function getRandomInt(min, max) {
   min = Math.ceil(min);
   max = Math.floor(max);
@@ -69,65 +81,115 @@ function addHours(numOfHours, date) {
   return newDate;
 }
 
-const flight_generator = (start) => {
-  const random_index = getRandomInt(0, 5)
-  const destinations = ["EWR", "LAX", "RUN", "SFO", "MIA"]
+const rotation_generator = (base, start) => {
+  if (base === "ORY") {
+    const random_index = getRandomInt(0, 5)
+    const destinations = ["EWR", "LAX", "RUN", "SFO", "MIA"]
 
-  // minimum rest 24h
-  const random_offset = getRandomInt(24, 144)
+    // minimum rest 24h
+    const random_offset = getRandomInt(24, 144)
 
-  // minimum layover 24h, max 72h
-  const random_layover1_length = getRandomInt(24, 72)
+    // minimum layover 24h, max 72h
+    const random_layover1_length = getRandomInt(24, 72)
 
-  if (random_index < 4) {
-    // simple rotatiox
-    let fake_flight = {
-      flight1Start: addHours(random_offset, new Date(start)),
-      flight1Number: '700',
-      flight1End: addHours(random_offset + 11, new Date(start)),
-      destination: destinations[random_index],
-      flight2Start: addHours(random_offset + 11 + random_layover1_length, new Date(start)),
-      flight2Number: '701',
-      flight2End: addHours(random_offset + 11 + random_layover1_length + 11, new Date(start))
+    if (random_index < 4) {
+      // simple rotation
+      // flights
+      // startDate
+      // endDate
+      const flight1 = {
+        origin: base,
+        startDate: addHours(random_offset, new Date(start)),
+        flightNumber: '700',
+        destination: destinations[random_index],
+        endDate: addHours(random_offset + 11, new Date(start))
+      }
+
+      const flight2 = {
+        origin: destinations[random_index],
+        startDate: addHours(random_offset + 11 + random_layover1_length, new Date(start)),
+        flightNumber: '701',
+        destination: base,
+        endDate: addHours(random_offset + 11 + random_layover1_length + 11, new Date(start))
+      }
+
+      const startDate = addHours(random_offset, new Date(start))
+      const endDate = addHours(random_offset + 11 + random_layover1_length + 11, new Date(start))
+
+      const fake_rotation = {
+        flights: [flight1, flight2],
+        startDate: startDate,
+        endDate: endDate
+      }
+
+      return fake_rotation
+    } else {
+      // PPT rotation
+      const random_layover2_length = getRandomInt(24, 72)
+      const random_layover3_length = getRandomInt(24, 72)
+
+      const flight1Start_offset = random_offset;
+      const flight1End_offset = flight1Start_offset + 13;
+      const flight2Start_offset = flight1End_offset + random_layover1_length;
+      const flight2End_offset = flight2Start_offset + 13;
+      const flight3Start_offset = flight2End_offset + random_layover2_length;
+      const flight3End_offset = flight3Start_offset + 13;
+      const flight4Start_offset = flight3End_offset + random_layover3_length;
+      const flight4End_offset = flight4Start_offset + 13;
+
+      const flight1 = {
+        origin: base,
+        startDate: addHours(flight1Start_offset, new Date(start)),
+        flightNumber: '710',
+        destination: 'SFO',
+        endDate: addHours(flight1End_offset, new Date(start))
+      }
+
+      const flight2 = {
+        origin: 'SFO',
+        startDate: addHours(flight2Start_offset, new Date(start)),
+        flightNumber: '731',
+        destination: 'PPT',
+        endDate: addHours(flight2End_offset, new Date(start))
+      }
+
+      const flight3 = {
+        origin: 'PPT',
+        startDate: addHours(flight3Start_offset, new Date(start)),
+        flightNumber: '732',
+        destination: 'SFO',
+        endDate: addHours(flight3End_offset, new Date(start))
+      }
+
+      const flight4 = {
+        origin: 'SFO',
+        startDate: addHours(flight4Start_offset, new Date(start)),
+        flightNumber: '711',
+        destination: base,
+        endDate: addHours(flight4End_offset, new Date(start))
+      }
+
+      const startDate = addHours(flight1Start_offset, new Date(start))
+      const endDate = addHours(flight4End_offset, new Date(start))
+
+      const fake_rotation = {
+        flights: [flight1, flight2, flight3, flight4],
+        startDate: startDate,
+        endDate: endDate
+      }
+
+      return fake_rotation
     }
-
-    return {rotation: fake_flight, end: fake_flight.flight2End}
   } else {
-    const random_layover2_length = getRandomInt(24, 72)
-    const random_layover3_length = getRandomInt(24, 72)
-
-    const flight1Start_offset = random_offset;
-    const flight1End_offset = flight1Start_offset + 13;
-    const flight2Start_offset = flight1End_offset + random_layover1_length;
-    const flight2End_offset = flight2Start_offset + 13;
-    const flight3Start_offset = flight2End_offset + random_layover2_length;
-    const flight3End_offset = flight3Start_offset + 13;
-    const flight4Start_offset = flight3End_offset + random_layover3_length;
-    const flight4End_offset = flight4Start_offset + 13;
-
-    let fake_flight = {
-      flight1Start: addHours(flight1Start_offset, new Date(start)),
-      flight1Number: '700',
-      flight1End: addHours(flight1End_offset, new Date(start)),
-      destination1: "SFO",
-      flight2Start: addHours(flight2Start_offset, new Date(start)),
-      flight2Number: '731',
-      flight2End: addHours(flight2End_offset, new Date(start)),
-      destination2: "PPT",
-      flight3Start: addHours(flight3Start_offset, new Date(start)),
-      flight3Number: '701',
-      flight3End: addHours(flight3End_offset, new Date(start)),
-      destination3: "SFO",
-      flight4Start: addHours(flight4Start_offset, new Date(start)),
-      flight4Number: '701',
-      flight4End: addHours(flight4End_offset, new Date(start))
-    }
-
-    return {rotation: fake_flight, end: fake_flight.flight4End}
+    // RUN base
   }
+
+
 }
 
 const profile_generator = (month) => {
+
+  const fake_base = getRandomBase()
 
   console.log(month)
   const month_int = parseInt(month) -1
@@ -147,21 +209,21 @@ const profile_generator = (month) => {
   console.log(range_start)
   console.log(range_end)
 
-  let rotations = []
+  let fake_rotations = []
   let cursor = range_start;
   while (cursor < range_end) {
-    const fake_flight = flight_generator(cursor);
+    const fake_rotation = rotation_generator(fake_base, cursor);
 
-    if (fake_flight.rotation.flight1Start < range_end) {
-      rotations.push(fake_flight.rotation);
+    if (fake_rotation.startDate < range_end) {
+      fake_rotations.push(fake_rotation);
     }
 
-    cursor = fake_flight.end;
+    cursor = fake_rotation.endDate;
   }
 
   const fake_profile = {
-    fullName: faker.name.fullName(),
-    rotations: rotations
+    base: fake_base,
+    rotations: fake_rotations
   }
 
   return fake_profile;
@@ -240,7 +302,7 @@ const process_ical = (ical, base) => {
           const flight2 = flights_meps[i+1];
 
           // short rotation found, building the rotation
-          const rotation = {flights: [flight1, flight2]}
+          const rotation = {flights: [flight1, flight2], startDate: flight1.startDate, endDate: flight2.endDate}
 
           // adding it to the roster
           roster.rotations.push(rotation)
@@ -256,7 +318,7 @@ const process_ical = (ical, base) => {
               const flight3 = flights_meps[i+2];
               const flight4 = flights_meps[i+3];
 
-              const rotation = {flights: [flight1, flight2, flight3, flight4]}
+              const rotation = {flights: [flight1, flight2, flight3, flight4], startDate: flight1.startDate, endDate: flight4.endDate}
 
               // adding it to the roster
               roster.rotations.push(rotation);
@@ -298,6 +360,13 @@ app.get('/', (req, res) => {
   res.send('Bee Buddy API');
 });
 
+app.get('/api/fake/random/', (req, res_api) => {
+  const month = req.query.month
+  const fake_profile = profile_generator(month)
+
+  res_api.send(fake_profile);
+});
+
 app.get('/api/fake/norotations', (req, res_api) => {
   res_api.send(emptyRoster);
 });
@@ -336,215 +405,6 @@ app.get('/api/profile/', async (req, res_api) => {
 
   res_api.send(roster);
 });
-
-app.get('/api/old_profile/', (req, res_api) => {
-  const login = req.query.login;
-  const password = req.query.password;
-
-  //cyberjet: request login page
-  const my_httpsAgent = new https.Agent({
-    rejectUnauthorized: false,
-    keepAlive: true,
-  });
-
-  const get_login_config = {
-      httpsAgent: my_httpsAgent,
-    }
-
-  let full_dump;
-
-  console.log("Requesting Login page...");
-  axios.get('https://cyberjet.frenchbee.com/js_crew_access/PAGE_Home', get_login_config)
-  .then(res_cyber => {
-    const headerDate = res_cyber.headers && res_cyber.headers.date ? res_cyber.headers.date : 'no response date';
-    // console.log('Status Code:', res_cyber.status);
-
-    const cheerio_login_page = cheerio.load(res_cyber.data);
-
-    // page title
-    const page_title = cheerio_login_page('title').text();
-    console.log("Page title received: " + page_title);
-
-    if (page_title !== "Erreur") {
-      // form action
-      const form_action_login = cheerio_login_page('form').attr('action')
-      console.log("Form action (inside login page): " + form_action_login)
-      const home_url = "https://cyberjet.frenchbee.com" + form_action_login;
-
-      var bodyFormData = new FormData();
-      // bodyFormData.append("WD_JSON_PROPRIETE_", "{\"m_oProprietesSecurisees\":{}}");
-      bodyFormData.append("WD_BUTTON_CLICK_", "A1");
-      bodyFormData.append("WD_ACTION_", "");
-      bodyFormData.append("A3", login);
-      bodyFormData.append("A2", password);
-
-      const standard_config = {
-        httpsAgent: my_httpsAgent,
-      }
-
-      console.log("Requesting Home page...");
-      axios.post(home_url, bodyFormData, standard_config).then(res_cyber => {
-        const cheerio_home_page = cheerio.load(res_cyber.data);
-
-        // page title
-        const page_title = cheerio_home_page('title').text();
-        console.log("Page title received: " + page_title);
-
-        if (page_title === "Login") {
-          // login unsuccessful
-          console.log("Invalid credentials, returning 404");
-          return res_api.status(403).send({
-             message: 'Credentials invalid!'
-          });
-        }
-
-        // fullName in #tzM93
-        const fullName = cheerio_home_page("#tzM93").text();
-        console.log("fullName: " + fullName);
-
-        // form action
-        const form_action_home = cheerio_home_page('form').attr('action')
-        console.log("Form action (inside home page): " + form_action_home)
-
-        // old way
-        console.log("Requesting Planning (via HOME) page...");
-        const planning_url = "https://cyberjet.frenchbee.com" + form_action_home;
-        var context_payload = new FormData();
-        context_payload.append("WD_ACTION_", "MENU");
-        context_payload.append("ID", "M70");
-
-        axios.post(planning_url, context_payload, standard_config).then(res_cyber => {
-          console.log("Planning (via menu) request executed");
-
-          // algo
-          // go previous, load flights for month - 1
-          // go next, load current month
-          // try to go next again, if next roster is up
-
-          // form action
-          const cheerio_planning_page = cheerio.load(res_cyber.data);
-          const form_action_planning = cheerio_planning_page('form').attr('action')
-          console.log("Form action (inside planning via menu): " + form_action_planning)
-
-          // building url for prerequest
-          const prerequest_url = "https://cyberjet.frenchbee.com" + form_action_planning;
-
-          console.log("(1/2) Pre-request to set UTC")
-          var context_payload_utc = new FormData();
-          context_payload_utc.append("WD_ACTION_", "AJAXPAGE");
-          context_payload_utc.append("EXECUTE", "47");
-          context_payload_utc.append("WD_CONTEXTE_", "M76");
-          context_payload_utc.append("M76", "1");
-
-          axios.post(prerequest_url, context_payload_utc, standard_config).then(res_cyber => {
-            console.log("Pre-request to set UTC executed")
-
-            console.log("(2/2) Request for UTC")
-            var utc_payload = new FormData();
-            utc_payload.append("WD_ACTION_", "AJAXPAGE");
-            utc_payload.append("LIGNESTABLE", "A2");
-            utc_payload.append("0", "0");
-
-            axios.post(prerequest_url, utc_payload, standard_config).then(res_cyber => {
-              console.log("Request for UTC executed")
-
-              console.log("(1/2) Pre-request M-1 (backward)")
-              var context_payload_bwd = new FormData();
-              context_payload_bwd.append("WD_ACTION_", "AJAXPAGE");
-              context_payload_bwd.append("EXECUTE", "16");
-              context_payload_bwd.append("WD_CONTEXTE_", "A3");
-              context_payload_bwd.append("upgrade-insecure-requests", "1");
-
-              axios.post(prerequest_url, context_payload_bwd, standard_config).then(res_cyber => {
-                console.log("Pre-request M-1 executed (backward)")
-
-                console.log("(2/2) Planning request for M-1 (for xml content)")
-                var planning_payload = new FormData();
-                planning_payload.append("WD_ACTION_", "AJAXPAGE");
-                planning_payload.append("LIGNESTABLE", "A2");
-                planning_payload.append("0", "0");
-
-                axios.post(prerequest_url, planning_payload, standard_config).then(res_cyber => {
-                  console.log("Planning request for M-1 (for xml content) executed")
-
-                  // dumping result
-                  let dump_M_minus1 = res_cyber.data.replaceAll("<![CDATA[", "");
-                  dump_M_minus1 = dump_M_minus1.replaceAll("]]>", "");
-                  full_dump = full_dump + dump_M_minus1;
-
-                  console.log("(1/2) Pre-request M (forward)")
-                  var context_payload_fwd = new FormData();
-                  context_payload_fwd.append("WD_ACTION_", "AJAXPAGE");
-                  context_payload_fwd.append("EXECUTE", "16");
-                  context_payload_fwd.append("WD_CONTEXTE_", "A7");
-                  context_payload_fwd.append("upgrade-insecure-requests", "1");
-
-                  axios.post(prerequest_url, context_payload_fwd, standard_config).then(res_cyber => {
-                    console.log("Pre-request M executed (forward)")
-
-                    console.log("(2/2) Planning request for M (for xml content)")
-                    var planning_payload = new FormData();
-                    planning_payload.append("WD_ACTION_", "AJAXPAGE");
-                    planning_payload.append("LIGNESTABLE", "A2");
-                    planning_payload.append("0", "0");
-                    axios.post(prerequest_url, planning_payload, standard_config).then(res_cyber => {
-                      console.log("Planning request for M (for xml content) executed")
-
-                      // dumping result
-                      let dump_M = res_cyber.data.replaceAll("<![CDATA[", "");
-                      dump_M = dump_M.replaceAll("]]>", "");
-                      full_dump = full_dump + dump_M;
-
-                      console.log("(1/2) Pre-request M+1 (forward)")
-                      var context_payload_fwd = new FormData();
-                      context_payload_fwd.append("WD_ACTION_", "AJAXPAGE");
-                      context_payload_fwd.append("EXECUTE", "16");
-                      context_payload_fwd.append("WD_CONTEXTE_", "A7");
-                      context_payload_fwd.append("upgrade-insecure-requests", "1");
-                      axios.post(prerequest_url, context_payload_fwd, standard_config).then(res_cyber => {
-                        console.log("Pre-request M+1 executed (forward)")
-
-                        console.log("(2/2) Planning request for M+1 (for xml content)")
-                        var planning_payload = new FormData();
-                        planning_payload.append("WD_ACTION_", "AJAXPAGE");
-                        planning_payload.append("LIGNESTABLE", "A2");
-                        planning_payload.append("0", "0");
-                        axios.post(prerequest_url, planning_payload, standard_config).then(res_cyber => {
-                          console.log("Planning request for M+1 (for xml content) executed")
-
-                          // dumping result
-                          let dump_M_plus1 = res_cyber.data.replaceAll("<![CDATA[", "");
-                          dump_M_plus1 = dump_M_plus1.replaceAll("]]>", "");
-
-                          if (dump_M.length !== dump_M_plus1.length) {
-                            console.log("M+1 is available, added to the dump")
-                            full_dump = full_dump + dump_M_plus1;
-                          } else {
-                            console.log("M+1 is not available")
-                          }
-
-                          console.log("All requests done. Processing now...")
-                          const roster = process_dump(full_dump, fullName)
-                          res_api.send(roster);
-                        }).catch(error => console.log(error));
-                      }).catch(error => console.log(error));
-                    }).catch(error => console.log(error));
-                  }).catch(error => console.log(error));
-                }).catch(error => console.log(error));
-              }).catch(error => console.log(error));
-            }).catch(error => console.log(error));
-          }).catch(error => console.log(error));
-        }).catch(error => console.log(error));
-      }).catch(error => console.log(error));
-    }
-    // res_api.send(myRoster);
-  })
-  .catch(err => {
-    console.log('Error: ', err.message);
-  });
-
-  // res_api.send(rosters);
-})
 
 //PORT ENVIRONMENT VARIABLE
 const port = process.env.PORT || 3001;

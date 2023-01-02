@@ -92,7 +92,7 @@ const rosters = [
 
   const rosters2 = [
     {
-      fullName: 'John DOE',
+      base: 'ORY',
       csLogin: 'jdoe',
       rotations: [
         {
