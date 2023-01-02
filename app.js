@@ -182,12 +182,128 @@ const rotation_generator = (base, start) => {
     }
   } else {
     // RUN base
+
+    // minimum rest 24h
+    const random_offset = getRandomInt(24, 144)
+    // minimum layover 24h, max 72h
+    const random_layover1_length = getRandomInt(24, 72)
+
+    var d = Math.random();
+    if (d < 0.8) {
+      // 80% chance of being here
+      // ORY flight
+      // simple RUN ORY RUN
+
+      const flight1 = {
+        origin: 'RUN',
+        startDate: addHours(random_offset, new Date(start)),
+        flightNumber: '700',
+        destination: 'ORY',
+        endDate: addHours(random_offset + 11, new Date(start))
+      }
+
+      const flight2 = {
+        origin: 'ORY',
+        startDate: addHours(random_offset + 11 + random_layover1_length, new Date(start)),
+        flightNumber: '701',
+        destination: 'RUN',
+        endDate: addHours(random_offset + 11 + random_layover1_length + 11, new Date(start))
+      }
+
+      const startDate = addHours(random_offset, new Date(start))
+      const endDate = addHours(random_offset + 11 + random_layover1_length + 11, new Date(start))
+
+      const fake_rotation = {
+        flights: [flight1, flight2],
+        startDate: startDate,
+        endDate: endDate
+      }
+
+      return fake_rotation
+    } else {
+      // 20%, b2b2b2 PPT
+      // b2b2b2 RUN ORY SFO PPT SFO ORY RUN
+      const random_layover2_length = getRandomInt(24, 72)
+      const random_layover3_length = getRandomInt(24, 72)
+      const random_layover4_length = getRandomInt(24, 72)
+      const random_layover5_length = getRandomInt(24, 72)
+
+      const flight1Start_offset = random_offset;
+      const flight1End_offset = flight1Start_offset + 13;
+      const flight2Start_offset = flight1End_offset + random_layover1_length;
+      const flight2End_offset = flight2Start_offset + 13;
+      const flight3Start_offset = flight2End_offset + random_layover2_length;
+      const flight3End_offset = flight3Start_offset + 13;
+      const flight4Start_offset = flight3End_offset + random_layover3_length;
+      const flight4End_offset = flight4Start_offset + 13;
+      const flight5Start_offset = flight4End_offset + random_layover4_length;
+      const flight5End_offset = flight5Start_offset + 13;
+      const flight6Start_offset = flight5End_offset + random_layover5_length;
+      const flight6End_offset = flight6Start_offset + 13;
+
+      const flight1 = {
+        origin: base,
+        startDate: addHours(flight1Start_offset, new Date(start)),
+        flightNumber: '710',
+        destination: 'ORY',
+        endDate: addHours(flight1End_offset, new Date(start))
+      }
+
+      const flight2 = {
+        origin: 'ORY',
+        startDate: addHours(flight2Start_offset, new Date(start)),
+        flightNumber: '731',
+        destination: 'SFO',
+        endDate: addHours(flight2End_offset, new Date(start))
+      }
+
+      const flight3 = {
+        origin: 'SFO',
+        startDate: addHours(flight3Start_offset, new Date(start)),
+        flightNumber: '732',
+        destination: 'PPT',
+        endDate: addHours(flight3End_offset, new Date(start))
+      }
+
+      const flight4 = {
+        origin: 'PPT',
+        startDate: addHours(flight4Start_offset, new Date(start)),
+        flightNumber: '711',
+        destination: 'SFO',
+        endDate: addHours(flight4End_offset, new Date(start))
+      }
+
+      const flight5 = {
+        origin: 'SFO',
+        startDate: addHours(flight5Start_offset, new Date(start)),
+        flightNumber: '711',
+        destination: 'ORY',
+        endDate: addHours(flight5End_offset, new Date(start))
+      }
+
+      const flight6 = {
+        origin: 'ORY',
+        startDate: addHours(flight6Start_offset, new Date(start)),
+        flightNumber: '711',
+        destination: 'RUN',
+        endDate: addHours(flight6End_offset, new Date(start))
+      }
+
+      const startDate = addHours(flight1Start_offset, new Date(start))
+      const endDate = addHours(flight6End_offset, new Date(start))
+
+      const fake_rotation = {
+        flights: [flight1, flight2, flight3, flight4, flight5, flight6],
+        startDate: startDate,
+        endDate: endDate
+      }
+
+      return fake_rotation
+    }
   }
-
-
 }
 
-const profile_generator = (month) => {
+const profile_generator = (month, year) => {
 
   const fake_base = getRandomBase()
 
@@ -195,8 +311,8 @@ const profile_generator = (month) => {
   const month_int = parseInt(month) -1
   console.log(month_int)
 
-  const month_start = new Date(Date.UTC(2022, month_int, 1));
-  const month_end = new Date(Date.UTC(2022, month_int + 1, 0));
+  const month_start = new Date(Date.UTC(year, month_int, 1));
+  const month_end = new Date(Date.UTC(year, month_int + 1, 0));
 
   console.log("Month:")
   console.log(month_start)
@@ -362,7 +478,8 @@ app.get('/', (req, res) => {
 
 app.get('/api/fake/random/', (req, res_api) => {
   const month = req.query.month
-  const fake_profile = profile_generator(month)
+  const year = req.query.year
+  const fake_profile = profile_generator(month, year)
 
   res_api.send(fake_profile);
 });
