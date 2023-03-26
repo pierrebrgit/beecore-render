@@ -52,6 +52,7 @@ const icao_iata = (str) => {
   if (str === "KLAX") return "LAX"
   if (str === "KMIA") return "MIA"
   if (str === "LFBO") return "TLS"
+  if (str === "LFPG") return "CDG"
 
   return str
 }
@@ -374,7 +375,7 @@ const process_ical = (ical, base) => {
         const end_date = event.end
 
 
-        if ((startBase !== "TLS") && (endBase !== "TLS")) {
+        if ((startBase !== "TLS") && (endBase !== "TLS") && (startBase !== "CDG") && (endBase !== "CDG")) {
 
           console.log("MEP found: " + startBase + " (" + signin_date.toUTCString() + ")" + " to " + endBase + " (" + end_date.toUTCString() + ")")
 
