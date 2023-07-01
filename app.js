@@ -458,24 +458,24 @@ app.use(express.json());
 //app.use(cors());
 
 app.use(cors({
-    origin: ["https://localhost:3000", "https://airbuddy.web.app/"],
+    origin: ["http://localhost:3000", "https://localhost:3000", "https://airbuddy.web.app/"],
     credentials: true,
 }));
 
 axios.defaults.headers.post['Content-Type'] = 'application/x-www-form-urlencoded';
 axios.defaults.withCredentials = true;
 
-axios.interceptors.request.use(x => {
-  console.log("====== AXIOS REQUEST ======");
-  console.log(x);
-  return x;
-})
+// axios.interceptors.request.use(x => {
+//   console.log("====== AXIOS REQUEST ======");
+//   console.log(x);
+//   return x;
+// })
 
-axios.interceptors.response.use(x => {
-  console.log("====== AXIOS RESPONSE ======");
-  console.log(x);
-  return x;
-})
+// axios.interceptors.response.use(x => {
+//   console.log("====== AXIOS RESPONSE ======");
+//   console.log(x);
+//   return x;
+// })
 
 //READ Request Handlers
 app.get('/', (req, res) => {
@@ -522,11 +522,15 @@ app.get('/api/profile/', async (req, res_api) => {
   let nlink = encodeURI(wlink.replace("webcal", "https"))
   //console.log(nlink)
 
-  const webEvents = await ical.async.fromURL(nlink);
+  try {
+    const webEvents = await ical.async.fromURL(nlink);
 
-  const roster = process_ical(webEvents, base)
+    const roster = process_ical(webEvents, base)
 
-  res_api.send(roster);
+    res_api.send(roster);
+  } catch (error) {
+    console.log("error in processing request")
+  }
 });
 
 //PORT ENVIRONMENT VARIABLE
