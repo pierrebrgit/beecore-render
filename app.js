@@ -499,7 +499,7 @@ app.get('/api/fake/lana', (req, res_api) => {
 });
 
 app.get('/api/test/cal', async (req, res_api) => {
-  let wlink = "webcal://cyberjet.frenchbee.com/CrewAccessICS/CrewICS?ics=8F3C62AE-89DD-4BD4-93E5-57E56AEE3776"
+  let wlink = "webcal://cyberjet.frenchbee.com/CrewAccessICS/CrewICS?ics=E836AA35-FF8B-41AB-942E-F6F80C638879"
   let nlink = encodeURI(wlink.replace("webcal", "https"))
 
   const webEvents = await ical.async.fromURL(nlink);
